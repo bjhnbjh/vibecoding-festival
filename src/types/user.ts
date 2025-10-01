@@ -1,9 +1,12 @@
+export type UserRole = 'super_admin' | 'university_admin' | 'user';
+
 export interface User {
   id: string
   email: string
   name: string
   avatar?: string
   university?: string
+  role: UserRole
   createdAt: string
 }
 
@@ -23,4 +26,5 @@ export interface SignupCredentials {
   password: string
   name: string
   university?: string
+  role?: UserRole
 }

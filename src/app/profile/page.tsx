@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -23,40 +25,61 @@ export default function ProfilePage() {
     school: ''
   });
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch('/api/profile');
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            setProfile(result.data);
-            setEditForm({
-              name: result.data.name || '',
-              school: result.data.school || ''
-            });
-          } else {
-            console.error('프로필 조회 실패:', result.error);
-            setProfile(null);
-          }
-        } else {
-          console.error('프로필 조회 응답 오류:', response.status);
-          setProfile(null);
-        }
+        // Supabase에서 즐겨찾기 개수 가져오기
+        const { count: favoriteCount } = await supabase
+          .from('favorites')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        // 프로필 정보 구성
+        const profileData: UserProfile = {
+          id: user.id,
+          email: user.email,
+          name: user.name || '',
+          school: user.university || '',
+          favoriteCount: favoriteCount || 0,
+          couponCount: 0, // 쿠폰 기능은 아직 미구현
+          joinedAt: user.createdAt,
+        };
+
+        setProfile(profileData);
+        setEditForm({
+          name: profileData.name,
+          school: profileData.school
+        });
       } catch (error) {
         console.error('프로필 조회 중 오류:', error);
-        setProfile(null);
+        // 오류 발생 시에도 기본 프로필 표시
+        const profileData: UserProfile = {
+          id: user.id,
+          email: user.email,
+          name: user.name || '',
+          school: user.university || '',
+          favoriteCount: 0,
+          couponCount: 0,
+          joinedAt: user.createdAt,
+        };
+        setProfile(profileData);
+        setEditForm({
+          name: profileData.name,
+          school: profileData.school
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user) {
-      fetchProfile();
-    } else {
-      setIsLoading(false);
-    }
+    fetchProfile();
   }, [user]);
 
   const handleEdit = () => {
@@ -74,32 +97,64 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (!user) return;
+
+    // 입력 검증
+    if (!editForm.name.trim()) {
+      alert('이름을 입력해주세요.');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editForm),
-      });
+      // Supabase Auth 사용자 메타데이터 업데이트 시도
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            name: editForm.name,
+            university: editForm.school,
+          },
+        });
 
-      const result = await response.json();
+        if (error) {
+          throw error;
+        }
 
-      if (response.ok && result.success) {
-        setProfile(result.data);
-        setIsEditing(false);
-        alert('프로필이 성공적으로 업데이트되었습니다.');
-      } else {
-        alert(result.error || '프로필 업데이트에 실패했습니다.');
+        console.log('Supabase 프로필 업데이트 성공');
+      } catch (supabaseError: any) {
+        console.warn('Supabase 업데이트 실패, 개발 모드 사용:', supabaseError.message);
       }
+
+      // 로컬스토리지 업데이트 (개발 모드 및 실제 모드 모두)
+      const updatedUser = {
+        ...user,
+        name: editForm.name,
+        university: editForm.school,
+      };
+      localStorage.setItem('festivalhub_user', JSON.stringify(updatedUser));
+
+      // 프로필 상태 업데이트
+      if (profile) {
+        setProfile({
+          ...profile,
+          name: editForm.name,
+          school: editForm.school,
+        });
+      }
+
+      setIsEditing(false);
+      alert('프로필이 성공적으로 업데이트되었습니다.');
+
+      // 페이지 새로고침하여 AuthContext 동기화
+      window.location.reload();
     } catch (error) {
       console.error('프로필 업데이트 중 오류:', error);
       alert('프로필 업데이트 중 오류가 발생했습니다.');
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
   if (!user) {
@@ -110,8 +165,8 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">로그인이 필요합니다</h2>
           <p className="text-gray-600 mb-6">프로필을 확인하시려면 로그인해주세요.</p>
           <div className="space-x-4">
-            <Button>로그인</Button>
-            <Button variant="outline">회원가입</Button>
+            <Button onClick={() => router.push('/login')}>로그인</Button>
+            <Button variant="outline" onClick={() => router.push('/signup')}>회원가입</Button>
           </div>
         </div>
       </div>

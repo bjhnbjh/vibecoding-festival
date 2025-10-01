@@ -182,17 +182,6 @@ export default function LoginPage() {
                 </div>
               </div>
             </form>
-
-            {/* 테스트 계정 정보 */}
-            <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">🧪 테스트 계정</h4>
-              <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                <div><strong>student@konkuk.ac.kr</strong> / password123</div>
-                <div><strong>jihyun@yonsei.ac.kr</strong> / password456</div>
-                <div><strong>minho@snu.ac.kr</strong> / password789</div>
-                <div><strong>test@example.com</strong> / test123</div>
-              </div>
-            </div>
           </div>
         </div>
       </main>

@@ -1,17 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Sparkles, User, LogOut, Heart, Search, Settings, Menu, X } from 'lucide-react';
+import { Sparkles, User, LogOut, Heart, Search, Settings, Menu, X, Mail } from 'lucide-react';
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => {
     logout();
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch('/api/inbox');
+      const result = await response.json();
+      if (result.success) {
+        setUnreadCount(result.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
   };
 
   return (
@@ -44,6 +65,20 @@ export function Header() {
                   className="text-gray-700 dark:text-gray-300 hover:text-festival-600 dark:hover:text-festival-400 transition-colors duration-200 font-medium"
                 >
                   즐겨찾기
+                </Link>
+                <Link
+                  href="/inbox"
+                  className="relative text-gray-700 dark:text-gray-300 hover:text-festival-600 dark:hover:text-festival-400 transition-colors duration-200 font-medium"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Mail className="w-5 h-5" />
+                    <span>우편함</span>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
 
                 {/* User Menu */}
@@ -148,6 +183,19 @@ export function Header() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     즐겨찾기
+                  </Link>
+                  <Link
+                    href="/inbox"
+                    className="relative flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-festival-600 dark:hover:text-festival-400 transition-colors duration-200 font-medium px-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Mail className="w-5 h-5" />
+                    <span>우편함</span>
+                    {unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">

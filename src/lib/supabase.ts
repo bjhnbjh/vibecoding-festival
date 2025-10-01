@@ -1,14 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 더미 데이터 모드 (환경 변수와 무관하게 더미 데이터만 사용)
-const supabaseUrl = 'https://dummy-project.supabase.co'
-const supabaseAnonKey = 'dummy-key-for-development-only'
+// 환경 변수에서 Supabase 설정 가져오기
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+// 환경 변수 검증
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Supabase 환경 변수가 설정되지 않았습니다. .env.local 파일을 확인해주세요.');
+  console.error('필수 환경 변수: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY');
+}
 
 // 환경 변수 로깅 (디버깅용)
 if (typeof window !== 'undefined') {
   console.log('Supabase Config:', {
     url: supabaseUrl,
-    key: supabaseAnonKey.substring(0, 20) + '...'
+    keyPrefix: supabaseAnonKey.substring(0, 20) + '...',
+    isConfigured: !!(supabaseUrl && supabaseAnonKey)
   });
 }
 
@@ -16,6 +23,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })
 

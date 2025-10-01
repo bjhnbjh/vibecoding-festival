@@ -55,7 +55,13 @@ export default function SignupPage() {
       });
 
       if (result.success) {
-        router.push('/login?message=회원가입이 완료되었습니다. 로그인해주세요.');
+        // 이메일 인증이 필요한 경우
+        if ((result as any).emailConfirmationRequired) {
+          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+        } else {
+          // 이메일 인증 비활성화 시 홈으로 이동
+          router.push('/');
+        }
       } else {
         setError(result.error || '회원가입에 실패했습니다.');
       }
